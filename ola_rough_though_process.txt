@@ -1,0 +1,108 @@
+I started with importing the data
+upon import I first checked the data types and found scope for correction
+
+the data is about drivers report collected at various time periods, so for a single driver I have multiple records and therefore to work with modelling for churn predictions I have to bring the granularity from multiple records to single record for each driver. the each record has to be such that it captures the essence of other records, trying to cover the growth that might have happened in the span of their lifetime. this will be the later part but now have to prepare and understand the data. and for understanding the data too the data would be needed to be a single-record driver level data.
+
+there were 3 columns which were to be converted into date format post conversion
+I check that there were columns like education_level,joining designation,grade,quarterly raing all these columns were like ordinal categorical data but the data type was int. ofcourse higher the better for all of this categories. I wanted to convert these mentioned features into categories but then found out that the model in future that I would be using would consider this features as categorical and hence work accordingly. as I am trying to solve this driver churn case study I wanted to use bagging and boosting and I know that when it comes to bagging using tree based models is the best choice for this kind of binary classification models. so I kept in mind the longer picture and resisted the idea of converting into category data type so in the future as these features would be numerical, via this tree based algos can make sure of this kind of columns for splitting criteria.
+
+post this i checked for null values.
+i found out that there were null values in 3 features - age,gender and LastWorkingDate ---> the lastworkingdate has too many null values this is because as mentioned earlier that the data is too granular, multiple records for a single driver. LastWorkingDate happens to be null when the driver has not churned so if a driver has multiple records and is not churned that means all those records will have null in the lastworkingdate column. around 91% of the data in lastworkingdate feature is null which means that majority of the data we have is of drivers who are not churned and which also suggests that the data might be heavily imbalanced. although these are just initial thoughts, more can be understood as we keep on refining the data and make it to such a strong level that it can be used for predictions and primarly to understand the data to a driver level. Age and Gender had relatively very very small amount of missing data and from our null check we can clearly see that we had in total 102 such drivers for whom we had missing age or gender. Also given that the data is very granular, i.e for each driver there were multiple records and i wanted to check the pattern of the null data i wanted to check like is the null in a way that suppose i have 10 records of a driver and out of that 10 records i have null in age or gender in all 10 of them which means that the complete data for that driver is not collected/lost or is it that out of all the records of particular drivers, for few minimum records the data is missing....i had a deep check for it and found out that 100% of all the missing data is false null which means that the data for gender or age whichever was misssing it was missing for only at particular records from multiple records of those drivers. now it is easier to fill in the gender as it does not change and will fill in the same age given the assumption that the last recorded data for particular driver will be the same as of previous records as it maybe that the year has shifted when the data is collected and hence we do not know the birthdate to update so and hence i will use knn imputer to do the job. i will also check the accuracy of the imputation of knn vs my logic to check how well has the knn worked. the value of k shall be 5 as i already know that 100% of the data is false null, the records which have higher records should be able to get the correct data as they have records greater then k neighnobrs, it is aobut the lesser records then 5 what i will have to check for in the case. whichever technique would have better accuracy would be further used for analysis. the comparision of my logic based imputation and the knn imputation has found differences. Altough out of 102 missing ages, knn did get 59 ages exactly the and for the rest the range of difference of logical and knn imputation is from 0 to 8.71. For gender the knn is performing soo good that it classified correctly for 101 gender and made error for only 1. so as of now that i have less data i will go forward with data imputation using my logic but when in large scale or production it has to be a calculated decision of whether does the accuracy of the "age" column impact too much then the logical method has to be used no matter the computation power required. otherwise if not too much of problem then knn imputation can also be used. but as of now i will be continuing with my logical imputation as for sure that would be better. the data in the lastworkingday is not to be filled as it is a column from which we are going to create another column which is churned which will have value as 1 if the lastworkingdate is available otherwise 0 it means still working.
+
+now as i have clean data i will make the data at a driver level for this i will group the data on the driver level and for each driver i am capturing the following details - 
+the latest age, gender, latest education, first last and mean for income, first value of dateofjoining,last value of lastworkingdate, first value of joining designation, first value of grade, sum of total business value, first and last value of quarterly rating. as of now i am trying to get these many columns so that i can further understand if there is any trend otherwise before model training irrelevant features would be dropped.
+
+now that i have data according to the driver level i will start with eda and start to understand the data using statistics and visual analysis.
+
+
+now that i have the full and final clean driver level data i will start exploring it
+
+the data i have got is for 2381 drives out of which.
+out of all the drivers around 60% are male other 40% female
+out of all the drivers around 68% are churned other 32% still operating
+out of all female drivers again around 68% are churned other 32% still operating
+out of all male drivers again around 68% are churned other 32% still operating
+
+the data at hand covers drivers information spanning 29 unique cities.
+All drivers have consistently operated in only one city throughout the data collection process, without changing their city of operation. which means for all the time of the readings it is seen that the driver is operating in only 1 city no change in operating city is observed anywhere.
+
+for all the drivers, education level is uniform for level 0,1,2 (Education level – 0 for 10+ ,1 for 12+ ,2 for graduate) all are around 33%.
+
+for joining designation it can be seen that 43% of drivers join with designation as 1, 34% as 2, 21% as 3, 1.51% as 4 and other 0.46% as 5. here it can be seen that higher designations are very very rarely given to a driver while joining.
+
+while joining drivers are given grades too, the order of grades given is as follows  -grade
+2    36.37
+1    31.54
+3    25.66
+4     5.54
+5     0.88
+Name: proportion, dtype: float64
+
+for first_quarter_rating
+1    69.26
+2    17.26
+3     9.07
+4     4.41
+Name: proportion, dtype: float64
+
+for latest_quarter_rating
+1    73.25
+2    15.20
+3     7.06
+4     4.49
+Name: proportion, dtype: float64
+
+i tried to check if the first and the latest quarter has any growth, if no growth then 0 else 1 
+
+Value counts for quarterly_rating_growth_indicator:
+
+quarterly_rating_growth_indicator
+0    84.96
+1    15.04
+Name: proportion, dtype: float64
+
+only 15% of drivers have seen a rating growth for the given span of 2 years of data.
+
+similarly i made an indicator comparing the first and latest income, if no growth then 0 else 1
+
+Value counts for income_growth_indicator:
+
+income_growth_indicator
+0    98.19
+1     1.81
+Name: proportion, dtype: float64
+
+shockingly it is seen that only ~1.8% of the drivers see a income growth.
+
+
+the data at hand suggests that most of the drivers are from city C20 followed by C15 and then C29. all other cities have a uniform kind of count of drivers.
+
+for most of the drivers the observed date of joining is 28 with 120+ drivers joining them, then date 30 around 120 and then 29 having 100+ drivers.all other dates do not have a significant difference as such. the least onboarding of driver happens on 24,22 and then at last 26.
+
+similarly for churn, most drivers churn on date 29 with 120+drivers leaving and then 28 and then 27 other all dates don't have significant difference. 
+the least churning date observed is 3 then 26 then 31.
+
+when month of joining is concerned top 3 months are month 7,5 and 10
+least 3 are 4,2 and 3
+
+
+similarly for churning top 3 months when drivers churn are 7,5 and 2 here after the 7 month the difference for other months is not significant. the least 2 are 4 and 8 months when drivers churn the lowest.
+
+slightly lesser drivers churned in 2020 then in 2019 as per the given data for the 2 years of 2019-2020.
+
+for numerical features like age, avg_income,first_income and last income all of them show very similar distribution. it shows slightly left skewed nature with few outliers in the left side.
+
+whereas the total_business_value is a very very highly left skewed distribution with many outliers in the left side.
+
+from the heatmap for correlation it is observed that the avg_income, first_income and last_income have very strong correlation value of 1. this is perfect positive correlation observed.
+
+also grade has considerable positive correlation with all 3 income features, and joining_designation.
+also i can see that there is a negative correlation between churned and latest_quarter_rating, this means that lower the rating higher the chances that the driver is going to churn and vice versa.
+similar kind of information was observed from mutual info measure. it suggested that latest_quarter_rating is the factor which explains much for churn and then total_business_value and then quarterly_rating_growth_indicator.
+
+the columns which tell very very less about the churned column is age,gender and joining_designation.
+as the data is imbalanced i worked in a way that first i would model the data with models which is robust to imbalanced data and where scaling is not required. post if this doesn't work i will upsample the data using smote because the data is less and therefore upsampling is a better choice. now i will try to work with other bagging and boosting algos. the raw model balanced random forest classifier gave around 76% accuracy on testing data and high error of false alarm(False positive).
+from analysis uptill now i can see that latest_quarter_rating is a strong feature for predicting churn but let us still confirm the same by training a balanced random forest classifier at first as it does not require scaling and can work with imbalanced data directly. let us see what feature importances does this algo gives
+
+many bagging and boosting algos were checked and tested with hyperparameter tuning and the best of all of them was XGB classifier when trained with imbalanced data rather then that of smote upsampled data. this gave training accuracy of 84% and testing accuracy of 81%. by far this model was the best in terms of testing data, although this model had higher false positives. all other models very overfitting.
+
